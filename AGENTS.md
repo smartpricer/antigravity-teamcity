@@ -9,9 +9,8 @@ This repository provides a non-interactive AI prompt runner powered by the **Goo
 ```
 ├── .agents/
 │   └── skills/
-│       ├── test/            # Skill to run all repository test skills
-│       │   ├── SKILL.md
-│       │   └── run_all_tests.py
+│       ├── test/            # Skill listing all repository test skills
+│       │   └── SKILL.md
 │       └── test-stream/     # Skill to test token streaming output
 │           ├── SKILL.md
 │           └── test_stream.py
@@ -90,7 +89,4 @@ echo "Summarize build health" | GEMINI_API_KEY=... ./prompt.sh
 ```
 
 ### Running Test Skills
-To execute all test skills in `.agents/skills/`:
-```bash
-python3 .agents/skills/test/run_all_tests.py
-```
+Activate individual test skills (`test-progress`, `test-stream`, `test-uuid`, `test-websearch`) or activate the `test` skill to run all of them.

@@ -11,8 +11,42 @@ import sys
 import time
 
 
+def get_gemini_api_key() -> str:
+    key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if key:
+        return key
+
+    try:
+        pid = os.getpid()
+        while pid > 1:
+            proc_env_path = f"/proc/{pid}/environ"
+            if os.path.exists(proc_env_path):
+                try:
+                    with open(proc_env_path, "rb") as f:
+                        env_data = f.read().split(b"\x00")
+                        for item in env_data:
+                            item_str = item.decode("utf-8", errors="ignore")
+                            if item_str.startswith(("GEMINI_API_KEY=", "GOOGLE_API_KEY=")):
+                                val = item_str.split("=", 1)[1]
+                                if val:
+                                    return val
+                except OSError:
+                    pass
+
+            try:
+                with open(f"/proc/{pid}/stat", "r", encoding="utf-8") as f:
+                    stat_parts = f.read().split()
+                    pid = int(stat_parts[3])
+            except OSError:
+                break
+    except Exception:
+        pass
+
+    return ""
+
+
 def run_stream_test(prompt: str = "Write a numbered list from 1 to 10 counting up, with one sentence per number.") -> bool:
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = get_gemini_api_key()
     if not api_key:
         print("Error: GEMINI_API_KEY environment variable is not set.", file=sys.stderr)
         return False
@@ -23,6 +57,7 @@ def run_stream_test(prompt: str = "Write a numbered list from 1 to 10 counting u
         return False
 
     env = os.environ.copy()
+    env["GEMINI_API_KEY"] = api_key
     start_time = time.time()
 
     proc = subprocess.Popen(

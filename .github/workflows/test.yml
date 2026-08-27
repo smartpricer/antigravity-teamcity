@@ -11,6 +11,10 @@ jobs:
   test:
     name: Run Agent Skill Tests
     runs-on: ubuntu-latest
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      GEMINI_CLI_TRUST_WORKSPACE: "true"
 
     steps:
       - name: Checkout Repository
@@ -21,8 +25,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Run Gemini CLI Action
-        uses: google-github-actions/run-gemini-cli@v0
-        with:
-          api_key: ${{ secrets.GEMINI_API_KEY }}
-          prompt: "Run all test skills and report status. Fail on failure."
+      - name: Run Gemini CLI
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          GEMINI_CLI_TRUST_WORKSPACE: "true"
+        run: |
+          npx -y @google/gemini-cli -y -m "$GEMINI_MODEL" --prompt 'Activate the test skill to run all test skills and report status'
