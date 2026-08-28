@@ -5,16 +5,19 @@
 
 An automated, non-interactive AI prompt runner powered by the **Google Antigravity SDK**, engineered specifically for execution inside **TeamCity CI/CD build agents**.
 
+The TeamCity meta-runner configuration can be found in `teamcity.xml`.
+
 ---
 
 ## Features
 
 - 🤖 **Google Antigravity SDK Integration**: Automated execution using Gemini models (`gemini-2.5-flash`, `gemini-3.6-flash`, etc.).
 - 🚀 **TeamCity Service Messages**: Built-in tools for logging blocks, status updates, parameters, artifacts, progress messages, and test reports.
-- ⚡ **Real-Time Streaming**: Zero-lag, uncolored text token streaming directly to `stdout`.
+- ⚡ **Real-Time Streaming**: Zero-lag, uncolored text token and command output streaming directly to `stdout`.
+- ⏱️ **Timestamping**: Optional `--with-timestamp` ISO 8601 timestamping with timezone offset for latency and streaming evaluation.
 - 🔑 **Flexible Environment Support**: Configuration via standard environment variables (`GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_EFFORT`).
 - 🛠️ **Utility Tools**: Built-in random UUID v4 and time-ordered RFC 9562 UUID v7 generators.
-- 🧪 **Comprehensive Skill Test Suite**: Built-in agent skills for validating progress, streaming, UUIDs, and web search.
+- 🧪 **Comprehensive Skill Test Suite**: Built-in agent skills for validating progress, streaming, Docker execution, UUIDs, and web search.
 
 ---
 
@@ -32,7 +35,19 @@ You can run prompts non-interactively by piping text directly into `./prompt.sh`
 echo "Summarize build health and check workspace status" | GEMINI_API_KEY="your-api-key" ./prompt.sh
 ```
 
-The runner automatically sets up a local virtual environment in `.venv/` and installs pinned dependencies on first execution.
+With ISO 8601 timestamps enabled:
+
+```bash
+echo "Run build checks" | GEMINI_API_KEY="your-api-key" ./prompt.sh --with-timestamp
+```
+
+### Installation via `pipx` or `pip`
+
+This project is packaged with `pyproject.toml` and can be installed or executed via `pipx`:
+
+```bash
+pipx run --spec git+https://github.com/smartpricer/antigravity-teamcity.git antigravity-teamcity
+```
 
 ---
 
@@ -64,8 +79,9 @@ The runner automatically sets up a local virtual environment in `.venv/` and ins
 
 ## Configuration
 
-| Environment Variable | Default | Description |
+| CLI Flag / Environment Variable | Default | Description |
 |---|---|---|
+| `--with-timestamp` | *Disabled* | Prefixes output lines with ISO 8601 timestamps containing timezone offsets. |
 | `GEMINI_API_KEY` | `""` | Google Gemini API Key. |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | Gemini model identifier. |
 | `GEMINI_EFFORT` | `medium` | Model reasoning/thinking effort (`minimal`, `low`, `medium`, `high`, `extra_high`). |
@@ -80,19 +96,22 @@ This repository includes agent skills under `.agents/skills/`:
 
 | Skill | Path | Purpose |
 |---|---|---|
-| **`test`** | `.agents/skills/test/` | Discovers and executes all repository test skills. |
+| **`test`** | `.agents/skills/test/` | Discovers and runs all repository test skills. |
+| **`test-no-empty-lines`** | `.agents/skills/test-no-empty-lines/` | Validates that zero empty lines are output to console. |
 | **`test-progress`** | `.agents/skills/test-progress/` | Validates 3-step progress reporting (`tc_set_progress_message`). |
-| **`test-stream`** | `.agents/skills/test-stream/` | Validates real-time token streaming output. |
+| **`test-stream`** | `.agents/skills/test-stream/` | Validates real-time token streaming to stdout. |
+| **`test-stream-tool`** | `.agents/skills/test-stream-tool/` | Validates real-time streaming of tool calls and text. |
+| **`test-stream-docker`** | `.agents/skills/test-stream-docker/` | Validates real-time streaming of `docker run` execution output. |
 | **`test-uuid`** | `.agents/skills/test-uuid/` | Validates `uuid`, `uuid_v4`, and `uuid_v7` generation. |
-| **`test-websearch`** | `.agents/skills/test-websearch/` | Validates live web searching capabilities. |
+| **`test-websearch`** | `.agents/skills/test-websearch/` | Validates live web search capabilities. |
 
-Activate individual test skills (`test-progress`, `test-stream`, `test-uuid`, `test-websearch`) or activate the `test` skill to execute all test skills in the repository.
+Activate individual test skills or activate the **`test`** skill to execute all test skills in the repository.
 
 ---
 
 ## GitHub Actions Integration
 
-A GitHub Actions workflow is provided at `.github/workflows/test.yml` using `npx -y @google/gemini-cli`:
+A GitHub Actions workflow is provided at `.github/workflows/test.yml` using `@google/gemini-cli`:
 
 ```yaml
       - name: Run Gemini CLI

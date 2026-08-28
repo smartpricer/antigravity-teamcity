@@ -1,0 +1,40 @@
+<meta-runner name="Gemini Prompt">
+  <description>Run an AI prompt using Gemini</description>
+  <settings>
+    <parameters>
+      <param name="GEMINI_MODEL" value="%env.GEMINI_MODEL%" spec="text display='hidden' readOnly='true' validationMode='any'" />
+      <param name="GEMINI_API_KEY" value="%env.GEMINI_API_KEY%" spec="password readOnly='true' display='hidden'" />
+      <param name="prompt" value="hello world" spec="text" />
+      <param name="work_dir" value="" spec="text" />
+    </parameters>
+    <build-runners>
+      <runner name="Run Gemini Prompt" type="simpleRunner">
+        <parameters>
+          <param name="script.content"><![CDATA[#!/bin/bash
+set -e
+
+git config user.name "Gemini CLI"
+git config user.email "gemini@smart-pricer.com"
+
+# enable Gemini API key
+export GEMINI_API_KEY='%GEMINI_API_KEY%'
+
+# working directory
+if [ ! -z "%work_dir%" ]; then
+  echo "Working Directory: %work_dir%"
+  cd "%work_dir%"
+fi
+
+# run the prompt
+pipx run --spec git+https://github.com/smartpricer/antigravity-teamcity.git antigravity-teamcity << 'END_OF_PROMPT'
+%prompt%
+END_OF_PROMPT
+            ]]></param>
+          <param name="teamcity.step.mode" value="default" />
+          <param name="use.custom.script" value="true" />
+        </parameters>
+      </runner>
+    </build-runners>
+    <requirements />
+  </settings>
+</meta-runner>
