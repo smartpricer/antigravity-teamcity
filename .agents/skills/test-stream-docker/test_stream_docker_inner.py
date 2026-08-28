@@ -12,15 +12,16 @@ import time
 
 def main():
     start_ts = datetime.datetime.now().astimezone().isoformat()
-    print(f"({start_ts}) Inner docker script starting...", flush=True)
+    print(f"({start_ts}) Inner docker script starting...", file=sys.stdout, flush=True)
 
     for i in range(1, 6):
         iso_ts = datetime.datetime.now().astimezone().isoformat()
-        print(f"({iso_ts}) Inner docker counter step {i}", flush=True)
+        target_stream = sys.stdout if i % 2 != 0 else sys.stderr
+        print(f"({iso_ts}) Inner docker counter step {i}", file=target_stream, flush=True)
         time.sleep(0.4)
 
     end_ts = datetime.datetime.now().astimezone().isoformat()
-    print(f"({end_ts}) Inner docker script finished.", flush=True)
+    print(f"({end_ts}) Inner docker script finished.", file=sys.stderr, flush=True)
 
 
 if __name__ == "__main__":

@@ -64,7 +64,7 @@ def run_stream_tool_test() -> bool:
         print(f"Error: {inner_script} not found.", file=sys.stderr)
         return False
 
-    prompt = f"Run the command 'python3 {inner_script}' using run_command tool."
+    prompt = f"Run the command 'python3 {inner_script}' using run_command tool and print its full raw stdout and stderr."
 
     print("--- Running Tool Command Streaming Test ---")
     start_time = time.time()

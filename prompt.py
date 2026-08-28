@@ -514,7 +514,8 @@ CRITICAL REQUIREMENTS:
    - To report build problems or status: Call `tc_report_build_problem` or `tc_set_build_status`.
    - To record parameters or publish outputs: Call `tc_set_parameter` or `tc_publish_artifacts`.
 
-2. COMMAND LOGGING: Whenever you execute commands via `run_command` (such as `docker run`, build scripts, or shell commands), you MUST print the exact, raw, unedited stdout and stderr returned by that command in your response text so that complete command execution logs are preserved and visible in TeamCity.
+2. COMMAND LOGGING & PASSTHROUGH:
+   Whenever you execute commands via `run_command` (such as `docker run`, `gcloud`, build scripts, or shell commands), you MUST print the complete, exact, raw, unedited stdout and stderr returned by that command in your response text. Never summarize, truncate, or omit command execution logs so that complete execution logs are preserved and visible in TeamCity.
 
 Output plain text directly without interactive formatting or ANSI color codes.
 """
