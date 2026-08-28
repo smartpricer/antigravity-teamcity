@@ -14,9 +14,10 @@ Execute each of the following test skills in order:
 1. **`test-no-empty-lines`**: Validates that zero empty lines are output to console during execution.
 2. **`test-progress`**: Validates TeamCity progress reporting across a 3-step build scenario (`TEAMCITY_VERSION=1`).
 3. **`test-stream`**: Validates real-time token streaming to stdout.
-4. **`test-stream-tool`**: Validates real-time streaming of tool calls (TeamCity service messages) and text.
-5. **`test-uuid`**: Validates `uuid`, `uuid_v4`, and `uuid_v7` tool generation.
-6. **`test-websearch`**: Validates live web search functionality.
+4. **`test-stream-docker`**: Validates real-time streaming of docker run execution output containing timestamps.
+5. **`test-stream-tool`**: Validates real-time streaming of tool calls (TeamCity service messages) and text.
+6. **`test-uuid`**: Validates `uuid`, `uuid_v4`, and `uuid_v7` tool generation.
+7. **`test-websearch`**: Validates live web search functionality.
 
 ## Instructions
 

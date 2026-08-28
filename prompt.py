@@ -15,12 +15,14 @@ import uuid as _uuid_module
 from google.antigravity import Agent, CapabilitiesConfig, LocalAgentConfig
 from google.antigravity import policy
 from google.antigravity.types import (
+    BuiltinTools,
     GeminiAPIEndpoint,
     GeminiModelOptions,
     ModelTarget,
     ModelType,
     Text,
     ThinkingLevel,
+    ToolCall,
 )
 
 
@@ -40,7 +42,7 @@ def console_write(text: str) -> None:
         if newline_idx == -1:
             chunk = text[i:]
             if with_timestamp and _at_line_start and chunk.strip():
-                iso_ts = datetime.datetime.now().isoformat()
+                iso_ts = datetime.datetime.now().astimezone().isoformat()
                 sys.stdout.write(f"[{iso_ts}] ")
             if _at_line_start and chunk:
                 _at_line_start = False
@@ -49,7 +51,7 @@ def console_write(text: str) -> None:
         else:
             line_part = text[i:newline_idx]
             if with_timestamp and _at_line_start and line_part.strip():
-                iso_ts = datetime.datetime.now().isoformat()
+                iso_ts = datetime.datetime.now().astimezone().isoformat()
                 sys.stdout.write(f"[{iso_ts}] ")
             sys.stdout.write(line_part + "\n")
             _at_line_start = True
@@ -504,15 +506,15 @@ async def main():
     system_instructions = """You are an AI assistant executing tasks inside a TeamCity CI/CD build server.
 You have access to tools for interacting directly with the TeamCity build runner via TeamCity service messages.
 
-CRITICAL REQUIREMENT:
-For every step, phase, or action in your task, you MUST proactively call the TeamCity service message tools:
-- Before starting a step or phase: Call `tc_set_progress_message` and `tc_block_open`.
-- When finishing a step or phase: Call `tc_block_close`.
-- To log key status updates: Call `tc_log_message`.
-- To report build problems or status: Call `tc_report_build_problem` or `tc_set_build_status`.
-- To record parameters or publish outputs: Call `tc_set_parameter` or `tc_publish_artifacts`.
+CRITICAL REQUIREMENTS:
+1. For every step, phase, or action in your task, proactively call the TeamCity service message tools:
+   - Before starting a step or phase: Call `tc_set_progress_message` and `tc_block_open`.
+   - When finishing a step or phase: Call `tc_block_close`.
+   - To log key status updates: Call `tc_log_message`.
+   - To report build problems or status: Call `tc_report_build_problem` or `tc_set_build_status`.
+   - To record parameters or publish outputs: Call `tc_set_parameter` or `tc_publish_artifacts`.
 
-Always call these tools actively as you execute steps so that TeamCity receives real-time progress updates and log blocks in the build log.
+2. COMMAND LOGGING: Whenever you execute commands via `run_command` (such as `docker run`, build scripts, or shell commands), you MUST print the exact, raw, unedited stdout and stderr returned by that command in your response text so that complete command execution logs are preserved and visible in TeamCity.
 
 Output plain text directly without interactive formatting or ANSI color codes.
 """
@@ -559,7 +561,12 @@ Output plain text directly without interactive formatting or ANSI color codes.
     async with Agent(config) as agent:
         response = await agent.chat(prompt)
         async for chunk in response.chunks:
-            if isinstance(chunk, Text):
+            if isinstance(chunk, ToolCall):
+                if chunk.name in ("run_command", BuiltinTools.RUN_COMMAND):
+                    cmd = chunk.args.get("command_line", "")
+                    if cmd:
+                        console_write(f"$ {cmd}\n")
+            elif isinstance(chunk, Text):
                 console_write(chunk.text)
         if not _at_line_start:
             console_write("\n")

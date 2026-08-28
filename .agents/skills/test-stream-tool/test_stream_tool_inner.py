@@ -11,15 +11,15 @@ import time
 
 
 def main():
-    start_ts = datetime.datetime.now().isoformat()
+    start_ts = datetime.datetime.now().astimezone().isoformat()
     print(f"({start_ts}) Inner script starting...", flush=True)
 
     for i in range(1, 6):
-        iso_ts = datetime.datetime.now().isoformat()
+        iso_ts = datetime.datetime.now().astimezone().isoformat()
         print(f"({iso_ts}) Inner counter step {i}", flush=True)
         time.sleep(0.4)
 
-    end_ts = datetime.datetime.now().isoformat()
+    end_ts = datetime.datetime.now().astimezone().isoformat()
     print(f"({end_ts}) Inner script finished.", flush=True)
 
 

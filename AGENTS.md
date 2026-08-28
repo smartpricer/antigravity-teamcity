@@ -68,6 +68,8 @@ The agent has access to the following built-in TeamCity tools:
 | `uuid()` / `uuid_v4()` | *N/A (Utility tool)* | Generates a random UUID v4 string. |
 | `uuid_v7()` | *N/A (Utility tool)* | Generates a time-ordered RFC 9562 UUID v7 string. |
 
+Don't use teamcity messages to passthrough console messages.
+
 ---
 
 ## Environment Variables
