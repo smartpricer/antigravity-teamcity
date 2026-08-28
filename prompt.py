@@ -537,5 +537,9 @@ Output plain text directly without interactive formatting or ANSI color codes.
         print()
 
 
-if __name__ == "__main__":
+def main_cli():
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    main_cli()

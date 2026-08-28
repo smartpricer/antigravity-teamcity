@@ -10,6 +10,8 @@ __pycache__/
 *$py.class
 *.so
 .pytest_cache/
+*.egg-info/
+.eggs/
 
 # Agent / Gemini runtime state
 .gemini_state/
