@@ -6,6 +6,7 @@ providing specialized TeamCity service message tools and clean, uncolored output
 """
 
 import asyncio
+import datetime
 import os
 import sys
 import time
@@ -18,8 +19,43 @@ from google.antigravity.types import (
     GeminiModelOptions,
     ModelTarget,
     ModelType,
+    Text,
     ThinkingLevel,
 )
+
+
+with_timestamp = False
+_at_line_start = True
+
+
+def console_write(text: str) -> None:
+    """Writes text to stdout, prefixing line starts with an ISO timestamp if --with-timestamp is enabled."""
+    global _at_line_start
+    if not text:
+        return
+
+    i = 0
+    while i < len(text):
+        newline_idx = text.find("\n", i)
+        if newline_idx == -1:
+            chunk = text[i:]
+            if with_timestamp and _at_line_start and chunk.strip():
+                iso_ts = datetime.datetime.now().isoformat()
+                sys.stdout.write(f"[{iso_ts}] ")
+            if _at_line_start and chunk:
+                _at_line_start = False
+            sys.stdout.write(chunk)
+            break
+        else:
+            line_part = text[i:newline_idx]
+            if with_timestamp and _at_line_start and line_part.strip():
+                iso_ts = datetime.datetime.now().isoformat()
+                sys.stdout.write(f"[{iso_ts}] ")
+            sys.stdout.write(line_part + "\n")
+            _at_line_start = True
+            i = newline_idx + 1
+
+    sys.stdout.flush()
 
 
 def escape_tc_string(val: object) -> str:
@@ -46,7 +82,11 @@ def escape_tc_string(val: object) -> str:
 
 
 def emit_tc_service_message(message_type: str, single_value: str | None = None, **kwargs: object) -> str:
-    """Formats and emits a TeamCity service message to stdout."""
+    """Formats and emits a TeamCity service message to stdout.
+
+    Ensures the service message starts on a fresh line so TeamCity's log parser
+    recognizes ##teamcity[...] at the beginning of the line without inline text prefixing.
+    """
     if single_value is not None:
         msg = f"##teamcity[{message_type} '{escape_tc_string(single_value)}']"
     else:
@@ -56,7 +96,10 @@ def emit_tc_service_message(message_type: str, single_value: str | None = None, 
                 attrs.append(f"{k}='{escape_tc_string(v)}'")
         msg = f"##teamcity[{message_type} {' '.join(attrs)}]"
 
-    print(msg, file=sys.stdout, flush=True)
+    if not _at_line_start:
+        console_write("\n")
+
+    console_write(f"{msg}\n")
     return msg
 
 
@@ -70,8 +113,7 @@ def tc_log_message(text: str, status: str = "NORMAL", error_details: str | None 
         status: Message status level. Allowed values: 'NORMAL', 'WARNING', 'FAILURE', 'ERROR'.
         error_details: Optional error details or stack trace for FAILURE/ERROR messages.
     """
-    msg = emit_tc_service_message("message", text=text, status=status, errorDetails=error_details)
-    return f"Logged TeamCity message: {msg}"
+    return emit_tc_service_message("message", text=text, status=status, errorDetails=error_details)
 
 
 def tc_block_open(name: str, description: str = "") -> str:
@@ -84,8 +126,7 @@ def tc_block_open(name: str, description: str = "") -> str:
     kwargs = {"name": name}
     if description:
         kwargs["description"] = description
-    msg = emit_tc_service_message("blockOpened", **kwargs)
-    return f"Opened TeamCity log block: {msg}"
+    return emit_tc_service_message("blockOpened", **kwargs)
 
 
 def tc_block_close(name: str) -> str:
@@ -94,8 +135,7 @@ def tc_block_close(name: str) -> str:
     Args:
         name: The name of the log block to close (must match the blockOpened name).
     """
-    msg = emit_tc_service_message("blockClosed", name=name)
-    return f"Closed TeamCity log block: {msg}"
+    return emit_tc_service_message("blockClosed", name=name)
 
 
 def tc_set_parameter(name: str, value: str) -> str:
@@ -110,8 +150,7 @@ def tc_set_parameter(name: str, value: str) -> str:
         name: Name of the parameter (e.g. 'env.DEPLOY_TARGET', 'app.version').
         value: Value to assign to the parameter.
     """
-    msg = emit_tc_service_message("setParameter", name=name, value=value)
-    return f"Set TeamCity parameter: {msg}"
+    return emit_tc_service_message("setParameter", name=name, value=value)
 
 
 def tc_set_build_status(status: str = "SUCCESS", text: str = "") -> str:
@@ -124,8 +163,7 @@ def tc_set_build_status(status: str = "SUCCESS", text: str = "") -> str:
     kwargs = {"status": status}
     if text:
         kwargs["text"] = text
-    msg = emit_tc_service_message("buildStatus", **kwargs)
-    return f"Updated TeamCity build status: {msg}"
+    return emit_tc_service_message("buildStatus", **kwargs)
 
 
 def tc_report_build_problem(description: str, identity: str = "") -> str:
@@ -138,8 +176,7 @@ def tc_report_build_problem(description: str, identity: str = "") -> str:
     kwargs = {"description": description}
     if identity:
         kwargs["identity"] = identity
-    msg = emit_tc_service_message("buildProblem", **kwargs)
-    return f"Reported TeamCity build problem: {msg}"
+    return emit_tc_service_message("buildProblem", **kwargs)
 
 
 def tc_publish_artifacts(path: str) -> str:
@@ -148,8 +185,7 @@ def tc_publish_artifacts(path: str) -> str:
     Args:
         path: Path rules for artifacts (e.g., 'target/*.jar', 'logs => logs.zip', 'reports => reports').
     """
-    msg = emit_tc_service_message("publishArtifacts", single_value=path)
-    return f"Published TeamCity artifacts: {msg}"
+    return emit_tc_service_message("publishArtifacts", single_value=path)
 
 
 def tc_set_build_number(build_number: str) -> str:
@@ -158,8 +194,7 @@ def tc_set_build_number(build_number: str) -> str:
     Args:
         build_number: New build number format or string (e.g. '1.0.42-release').
     """
-    msg = emit_tc_service_message("buildNumber", single_value=build_number)
-    return f"Updated TeamCity build number: {msg}"
+    return emit_tc_service_message("buildNumber", single_value=build_number)
 
 
 def tc_set_progress_message(message: str) -> str:
@@ -168,8 +203,7 @@ def tc_set_progress_message(message: str) -> str:
     Args:
         message: Progress status message to display.
     """
-    msg = emit_tc_service_message("progressMessage", single_value=message)
-    return f"Updated TeamCity progress message: {msg}"
+    return emit_tc_service_message("progressMessage", single_value=message)
 
 
 def tc_progress_start(message: str) -> str:
@@ -178,8 +212,7 @@ def tc_progress_start(message: str) -> str:
     Args:
         message: Name or description of the activity starting.
     """
-    msg = emit_tc_service_message("progressStart", single_value=message)
-    return f"Started TeamCity progress stage: {msg}"
+    return emit_tc_service_message("progressStart", single_value=message)
 
 
 def tc_progress_finish(message: str) -> str:
@@ -188,8 +221,7 @@ def tc_progress_finish(message: str) -> str:
     Args:
         message: Name or description of the activity finishing.
     """
-    msg = emit_tc_service_message("progressFinish", single_value=message)
-    return f"Finished TeamCity progress stage: {msg}"
+    return emit_tc_service_message("progressFinish", single_value=message)
 
 
 def tc_report_build_statistic(key: str, value: float) -> str:
@@ -199,8 +231,7 @@ def tc_report_build_statistic(key: str, value: float) -> str:
         key: The statistic key name (e.g., 'CodeCoverageL', 'ArtifactsSize', 'MyCustomMetric').
         value: Numeric value for the metric.
     """
-    msg = emit_tc_service_message("buildStatisticValue", key=key, value=str(value))
-    return f"Reported TeamCity build statistic: {msg}"
+    return emit_tc_service_message("buildStatisticValue", key=key, value=str(value))
 
 
 def tc_test_suite_start(name: str) -> str:
@@ -209,8 +240,7 @@ def tc_test_suite_start(name: str) -> str:
     Args:
         name: Name of the test suite.
     """
-    msg = emit_tc_service_message("testSuiteStarted", name=name)
-    return f"Started TeamCity test suite: {msg}"
+    return emit_tc_service_message("testSuiteStarted", name=name)
 
 
 def tc_test_suite_finish(name: str) -> str:
@@ -219,8 +249,7 @@ def tc_test_suite_finish(name: str) -> str:
     Args:
         name: Name of the test suite.
     """
-    msg = emit_tc_service_message("testSuiteFinished", name=name)
-    return f"Finished TeamCity test suite: {msg}"
+    return emit_tc_service_message("testSuiteFinished", name=name)
 
 
 def tc_test_start(name: str, capture_standard_output: bool = True) -> str:
@@ -230,8 +259,7 @@ def tc_test_start(name: str, capture_standard_output: bool = True) -> str:
         name: Full test name including namespace/class.
         capture_standard_output: Whether stdout/stderr from this test should be captured by TeamCity.
     """
-    msg = emit_tc_service_message("testStarted", name=name, captureStandardOutput="true" if capture_standard_output else "false")
-    return f"Started TeamCity test: {msg}"
+    return emit_tc_service_message("testStarted", name=name, captureStandardOutput="true" if capture_standard_output else "false")
 
 
 def tc_test_finish(name: str, duration_ms: int = 0) -> str:
@@ -244,8 +272,7 @@ def tc_test_finish(name: str, duration_ms: int = 0) -> str:
     kwargs = {"name": name}
     if duration_ms > 0:
         kwargs["duration"] = str(duration_ms)
-    msg = emit_tc_service_message("testFinished", **kwargs)
-    return f"Finished TeamCity test: {msg}"
+    return emit_tc_service_message("testFinished", **kwargs)
 
 
 def tc_test_failed(name: str, message: str = "", details: str = "") -> str:
@@ -261,8 +288,7 @@ def tc_test_failed(name: str, message: str = "", details: str = "") -> str:
         kwargs["message"] = message
     if details:
         kwargs["details"] = details
-    msg = emit_tc_service_message("testFailed", **kwargs)
-    return f"Reported TeamCity test failure: {msg}"
+    return emit_tc_service_message("testFailed", **kwargs)
 
 
 def tc_test_ignored(name: str, message: str = "") -> str:
@@ -275,8 +301,7 @@ def tc_test_ignored(name: str, message: str = "") -> str:
     kwargs = {"name": name}
     if message:
         kwargs["message"] = message
-    msg = emit_tc_service_message("testIgnored", **kwargs)
-    return f"Reported TeamCity test ignored: {msg}"
+    return emit_tc_service_message("testIgnored", **kwargs)
 
 
 def tc_test_output(name: str, stdout: str | None = None, stderr: str | None = None) -> str:
@@ -302,8 +327,7 @@ def tc_import_data(data_type: str, path: str) -> str:
         data_type: Report type (e.g., 'junit', 'surefire', 'nunit', 'mstest', 'vstest', 'checkstyle', 'pmd', 'findBugs', 'dotNetCoverage').
         path: Path to report file or directory (ant-style wildcards supported, e.g. 'build/test-results/**/*.xml').
     """
-    msg = emit_tc_service_message("importData", type=data_type, path=path)
-    return f"Configured TeamCity data import: {msg}"
+    return emit_tc_service_message("importData", type=data_type, path=path)
 
 
 def tc_compilation_start(compiler: str) -> str:
@@ -312,8 +336,7 @@ def tc_compilation_start(compiler: str) -> str:
     Args:
         compiler: Name of the compiler or compilation tool.
     """
-    msg = emit_tc_service_message("compilationStarted", compiler=compiler)
-    return f"Started compilation block: {msg}"
+    return emit_tc_service_message("compilationStarted", compiler=compiler)
 
 
 def tc_compilation_finish(compiler: str) -> str:
@@ -322,8 +345,7 @@ def tc_compilation_finish(compiler: str) -> str:
     Args:
         compiler: Name of the compiler or compilation tool.
     """
-    msg = emit_tc_service_message("compilationFinished", compiler=compiler)
-    return f"Finished compilation block: {msg}"
+    return emit_tc_service_message("compilationFinished", compiler=compiler)
 
 
 def tc_get_build_env() -> dict[str, str]:
@@ -440,6 +462,11 @@ def get_gemini_api_key() -> str:
 
 
 async def main():
+    global with_timestamp
+    if "--with-timestamp" in sys.argv:
+        with_timestamp = True
+        sys.argv.remove("--with-timestamp")
+
     # Read prompt from stdin
     prompt = sys.stdin.read().strip()
 
@@ -476,16 +503,16 @@ async def main():
 
     system_instructions = """You are an AI assistant executing tasks inside a TeamCity CI/CD build server.
 You have access to tools for interacting directly with the TeamCity build runner via TeamCity service messages.
-Use these tools to:
-- Open and close log blocks (`tc_block_open`, `tc_block_close`) to group related output.
-- Set build status or report problems (`tc_set_build_status`, `tc_report_build_problem`).
-- Report progress and log messages (`tc_set_progress_message`, `tc_log_message`).
-- Set build parameters or environment variables for subsequent steps (`tc_set_parameter`).
-- Publish build artifacts when generated (`tc_publish_artifacts`).
-- Report test execution and results (`tc_test_start`, `tc_test_finish`, `tc_test_failed`, `tc_test_ignored`).
-- Report compilation blocks and build statistics (`tc_compilation_start`, `tc_report_build_statistic`).
 
-On a regular basis report your progress using the `tc_set_progress_message` tool.
+CRITICAL REQUIREMENT:
+For every step, phase, or action in your task, you MUST proactively call the TeamCity service message tools:
+- Before starting a step or phase: Call `tc_set_progress_message` and `tc_block_open`.
+- When finishing a step or phase: Call `tc_block_close`.
+- To log key status updates: Call `tc_log_message`.
+- To report build problems or status: Call `tc_report_build_problem` or `tc_set_build_status`.
+- To record parameters or publish outputs: Call `tc_set_parameter` or `tc_publish_artifacts`.
+
+Always call these tools actively as you execute steps so that TeamCity receives real-time progress updates and log blocks in the build log.
 
 Output plain text directly without interactive formatting or ANSI color codes.
 """
@@ -531,10 +558,11 @@ Output plain text directly without interactive formatting or ANSI color codes.
 
     async with Agent(config) as agent:
         response = await agent.chat(prompt)
-        async for token in response:
-            sys.stdout.write(token)
-            sys.stdout.flush()
-        print()
+        async for chunk in response.chunks:
+            if isinstance(chunk, Text):
+                console_write(chunk.text)
+        if not _at_line_start:
+            console_write("\n")
 
 
 def main_cli():

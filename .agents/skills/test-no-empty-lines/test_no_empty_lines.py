@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Streaming Test Script for prompt.sh.
+"""Empty Lines Verification Test Script for prompt.sh.
 
-Sends a counting prompt to ./prompt.sh, reads stdout chunk-by-chunk in real time,
-measures token arrival deltas, and validates that output streams incrementally.
+Executes a prompt triggering tools and text streaming with --with-timestamp,
+captures standard output, and verifies that no empty or whitespace-only lines are printed to the console.
 """
 
 import os
@@ -45,7 +45,7 @@ def get_gemini_api_key() -> str:
     return ""
 
 
-def run_stream_test(prompt: str = "Write a numbered list from 1 to 10 counting up, with one sentence per number.") -> bool:
+def run_no_empty_lines_test() -> bool:
     api_key = get_gemini_api_key()
     if not api_key:
         print("Error: GEMINI_API_KEY environment variable is not set.", file=sys.stderr)
@@ -56,9 +56,16 @@ def run_stream_test(prompt: str = "Write a numbered list from 1 to 10 counting u
         print(f"Error: {script_path} not found in current directory.", file=sys.stderr)
         return False
 
+    prompt = (
+        "Call tc_set_progress_message with message 'Step 1: Check lines' "
+        "and tc_block_open with name 'LineTest', then print 3 sentences, "
+        "and call tc_block_close with name 'LineTest'."
+    )
+
+    print("--- Running No Empty Lines Test ---")
+    start_time = time.time()
     env = os.environ.copy()
     env["GEMINI_API_KEY"] = api_key
-    start_time = time.time()
 
     proc = subprocess.Popen(
         [script_path, "--with-timestamp"],
@@ -74,51 +81,50 @@ def run_stream_test(prompt: str = "Write a numbered list from 1 to 10 counting u
         proc.stdin.write(prompt)
         proc.stdin.close()
 
-    chunks = []
-    print("--- Live Output Stream ---")
+    raw_output_chunks = []
+    print("--- Live Streamed Output ---")
     while True:
         if proc.stdout is None:
             break
-        chunk = proc.stdout.read(4)
+        chunk = proc.stdout.read(1024)
         if not chunk:
             break
-        now = time.time()
-        chunks.append((now - start_time, chunk))
+        raw_output_chunks.append(chunk)
         sys.stdout.write(chunk)
         sys.stdout.flush()
 
     proc.wait()
     stderr_data = proc.stderr.read() if proc.stderr else ""
+    duration = time.time() - start_time
+
+    full_output = "".join(raw_output_chunks)
 
     if proc.returncode != 0:
         print(f"\nExecution failed with code {proc.returncode}: {stderr_data}", file=sys.stderr)
         return False
 
-    if not chunks:
-        print("\nError: No output received from stream.", file=sys.stderr)
-        return False
+    # Split output into lines
+    lines = full_output.split("\n")
+    # Ignore trailing empty line from final trailing newline
+    if lines and not lines[-1]:
+        lines.pop()
 
-    first_arrival = chunks[0][0]
-    last_arrival = chunks[-1][0]
-    duration = last_arrival - first_arrival
+    empty_lines = [i + 1 for i, line in enumerate(lines) if not line.strip()]
 
-    print("\n\n--- Stream Performance Metrics ---")
-    print(f"Total chunks received: {len(chunks)}")
-    print(f"Time to first chunk:   {first_arrival:.3f}s")
-    print(f"Time to last chunk:    {last_arrival:.3f}s")
-    print(f"Active stream duration:{duration:.3f}s")
+    print("\n--- Console Line Verification Metrics ---")
+    print(f"Total lines captured: {len(lines)}")
+    print(f"Empty lines found:   {len(empty_lines)}")
+    if empty_lines:
+        print(f"Empty line indices:  {empty_lines}")
 
-    if len(chunks) > 5:
-        avg_chunk_time = duration / len(chunks)
-        print(f"Avg delay per chunk:   {avg_chunk_time:.4f}s")
-        print("RESULT: PASS (Output streamed incrementally)")
+    if not empty_lines and len(lines) > 0:
+        print("RESULT: PASS (Zero empty lines detected in console output)")
         return True
     else:
-        print("RESULT: FAIL (Output arrived all at once or insufficient chunks)")
+        print("RESULT: FAIL (Empty lines detected in console output)")
         return False
 
 
 if __name__ == "__main__":
-    test_prompt = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "Write a numbered list from 1 to 10 counting up, with one sentence per number."
-    success = run_stream_test(test_prompt)
+    success = run_no_empty_lines_test()
     sys.exit(0 if success else 1)

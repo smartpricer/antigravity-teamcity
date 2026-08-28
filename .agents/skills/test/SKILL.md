@@ -11,10 +11,12 @@ This skill executes all repository test skills sequentially and summarizes their
 
 Execute each of the following test skills in order:
 
-1. **`test-progress`**: Validates TeamCity progress reporting across a 3-step build scenario (`TEAMCITY_VERSION=1`).
-2. **`test-stream`**: Validates real-time token streaming to stdout.
-3. **`test-uuid`**: Validates `uuid`, `uuid_v4`, and `uuid_v7` tool generation.
-4. **`test-websearch`**: Validates live web search functionality.
+1. **`test-no-empty-lines`**: Validates that zero empty lines are output to console during execution.
+2. **`test-progress`**: Validates TeamCity progress reporting across a 3-step build scenario (`TEAMCITY_VERSION=1`).
+3. **`test-stream`**: Validates real-time token streaming to stdout.
+4. **`test-stream-tool`**: Validates real-time streaming of tool calls (TeamCity service messages) and text.
+5. **`test-uuid`**: Validates `uuid`, `uuid_v4`, and `uuid_v7` tool generation.
+6. **`test-websearch`**: Validates live web search functionality.
 
 ## Instructions
 
