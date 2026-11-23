@@ -9,16 +9,26 @@ This repository provides a non-interactive AI prompt runner powered by the **Goo
 ```
 ├── .agents/
 │   └── skills/
-│       ├── test/            # Skill listing all repository test skills
-│       │   └── SKILL.md
-│       └── test-stream/     # Skill to test token streaming output
-│           ├── SKILL.md
-│           └── test_stream.py
-├── .gitignore               # Ignores .venv, cache, and state files
-├── AGENTS.md                # Agent reference guide (this file)
-├── prompt.py                # Core Python script with Antigravity SDK & TeamCity tools
-├── prompt.sh                # Shell entrypoint (manages .venv and executes prompt.py)
-└── requirements.txt         # Pinned Python package dependencies
+│       ├── test/                  # Skill listing all repository test skills
+│       ├── test-no-empty-lines/   # Validates zero empty lines in console output
+│       ├── test-progress/         # Validates TeamCity progress reporting
+│       ├── test-stream/           # Validates real-time token streaming output
+│       ├── test-stream-docker/    # Validates real-time docker run output streaming
+│       ├── test-stream-tool/      # Validates real-time tool call & text streaming
+│       ├── test-uuid/             # Validates uuid, uuid_v4, and uuid_v7 tools
+│       └── test-websearch/        # Validates live web search capabilities
+├── .github/
+│   └── workflows/
+│       └── test.yml               # GitHub Actions workflow for agent skill tests
+├── .gitignore                     # Ignores .venv, cache, and state files
+├── AGENTS.md                      # Agent reference guide (this file)
+├── GEMINI.md -> AGENTS.md         # Symlink for Gemini agent instructions
+├── prompt.py                      # Core Python script with Antigravity SDK & TeamCity tools
+├── prompt.sh                      # Shell entrypoint (manages .venv and executes prompt.py)
+├── pyproject.toml                 # Package metadata & pipx/pip configuration
+├── README.md                      # Project documentation
+├── requirements.txt               # Pinned Python package dependencies
+└── teamcity.xml                   # TeamCity meta-runner configuration
 ```
 
 ---
@@ -91,4 +101,4 @@ echo "Summarize build health" | GEMINI_API_KEY=... ./prompt.sh
 ```
 
 ### Running Test Skills
-Activate individual test skills (`test-progress`, `test-stream`, `test-uuid`, `test-websearch`) or activate the `test` skill to run all of them.
+Activate individual test skills (`test-no-empty-lines`, `test-progress`, `test-stream`, `test-stream-docker`, `test-stream-tool`, `test-uuid`, `test-websearch`) or activate the `test` skill to run all of them.

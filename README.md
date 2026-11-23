@@ -1,7 +1,7 @@
 # Antigravity TeamCity Runner
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org)
+[![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
 
 An automated, non-interactive AI prompt runner powered by the **Google Antigravity SDK**, engineered specifically for execution inside **TeamCity CI/CD build agents**.
 
@@ -24,7 +24,7 @@ The TeamCity meta-runner configuration can be found in `teamcity.xml`.
 ## Quickstart
 
 ### Prerequisites
-- Python 3.10+
+- Python 3.11+
 - Google Gemini API Key (`GEMINI_API_KEY`)
 
 ### Basic Execution
