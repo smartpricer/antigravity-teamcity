@@ -11,9 +11,11 @@ import os
 import sys
 import time
 import uuid as _uuid_module
+from typing import Any, Callable
 
 from google.antigravity import Agent, CapabilitiesConfig, LocalAgentConfig
 from google.antigravity import policy
+from google.antigravity.tools.tool_runner import ToolWithSchema
 from google.antigravity.types import (
     BuiltinTools,
     GeminiAPIEndpoint,
@@ -24,6 +26,7 @@ from google.antigravity.types import (
     ThinkingLevel,
     ToolCall,
 )
+from google.genai import types as genai_types
 
 
 with_timestamp = False
@@ -399,33 +402,47 @@ def uuid_v7() -> str:
     return str(_uuid_module.UUID(int=val))
 
 
+def _with_json_schema(fn: Callable[..., Any]) -> ToolWithSchema:
+    """Wraps a tool callable with an explicit JSON Schema generated via use_json_schema=True."""
+    decl = genai_types.FunctionDeclaration.from_callable_with_api_option(
+        callable=fn,
+        api_option="GEMINI_API",
+        use_json_schema=True,
+    )
+    schema = decl.parameters_json_schema or {"type": "object", "properties": {}}
+    return ToolWithSchema(fn, schema)
+
+
 TEAMCITY_TOOLS = [
-    tc_log_message,
-    tc_block_open,
-    tc_block_close,
-    tc_set_parameter,
-    tc_set_build_status,
-    tc_report_build_problem,
-    tc_publish_artifacts,
-    tc_set_build_number,
-    tc_set_progress_message,
-    tc_progress_start,
-    tc_progress_finish,
-    tc_report_build_statistic,
-    tc_test_suite_start,
-    tc_test_suite_finish,
-    tc_test_start,
-    tc_test_finish,
-    tc_test_failed,
-    tc_test_ignored,
-    tc_test_output,
-    tc_import_data,
-    tc_compilation_start,
-    tc_compilation_finish,
-    tc_get_build_env,
-    uuid,
-    uuid_v4,
-    uuid_v7,
+    _with_json_schema(fn)
+    for fn in (
+        tc_log_message,
+        tc_block_open,
+        tc_block_close,
+        tc_set_parameter,
+        tc_set_build_status,
+        tc_report_build_problem,
+        tc_publish_artifacts,
+        tc_set_build_number,
+        tc_set_progress_message,
+        tc_progress_start,
+        tc_progress_finish,
+        tc_report_build_statistic,
+        tc_test_suite_start,
+        tc_test_suite_finish,
+        tc_test_start,
+        tc_test_finish,
+        tc_test_failed,
+        tc_test_ignored,
+        tc_test_output,
+        tc_import_data,
+        tc_compilation_start,
+        tc_compilation_finish,
+        tc_get_build_env,
+        uuid,
+        uuid_v4,
+        uuid_v7,
+    )
 ]
 
 
